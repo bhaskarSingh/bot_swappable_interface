@@ -41,6 +41,7 @@ h1 {
   left: 70px;
   width: 90px !important;
   height: 90px !important;
+  z-index: 100;
 }
 
 .head_left {
