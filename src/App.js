@@ -10,6 +10,8 @@ import {
 import { proxy, useProxy } from 'valtio';
 import { HexColorPicker } from 'react-colorful';
 import 'react-colorful/dist/index.css';
+import GLTFExporter from 'three-gltf-exporter';
+import * as THREE from 'three';
 
 //TODO: Make every mesh part colorable -- dependent on how the material is named inside blender
 const state = proxy({
@@ -80,12 +82,54 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
     )}'), auto`;
   }, [hovered]);
 
+  const link = useRef();
+
   const head = useGroup(scene, 'head');
   const hand = useGroup(scene, 'hand');
   const body = useGroup(scene, 'body');
   const leg = useGroup(scene, 'leg');
 
   return (
+    <>
+    <Html>
+    <button ref={link} onClick={() => {
+      const gltfExporter = new GLTFExporter();
+
+      gltfExporter.parse( [head[headCount], hand[bodyCount], body[bodyCount], leg[legCount]], function ( result ) {
+        console.log("result", result)
+        const blob = new Blob([result], { type: 'application/octet-stream' });
+
+        // const link = document.createElement( 'a' );
+        // link.style.display = 'none';
+        // window.document.body.appendChild( link ); 
+        // link.href = URL.createObjectURL( blob );
+				// link.download = "bot.glb";
+				// link.click();
+        upload(blob) 
+
+      }, {binary: true} );
+
+      function upload(blob){
+        var fd = new FormData();
+        // fd.append('bot', blob, 'bot.glb');
+        fd.append("file", blob);
+        fetch('http://localhost:3005/api/test',
+        {
+            method: 'post',
+            body: fd
+        }).then((res) => {
+          // console.log(res)
+          return res.json()
+        }).then(res => {
+          console.log(res);
+        }).catch(err => {
+          console.log(err);
+        });
+      }
+
+      console.log("yo")
+    }} >export</button>
+    </Html>
     <group
       onPointerOver={(e) => (e.stopPropagation(), set(e.object.material.name))}
       onPointerOut={(e) => e.intersections.length === 0 && set(null)}
@@ -103,6 +147,7 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
       {renderGroup(body, bodyCount, snap.items.body, 'body')}
       {renderGroup(leg, legCount, snap.items.legs, 'legs')}
     </group>
+    </>
   );
 };
 

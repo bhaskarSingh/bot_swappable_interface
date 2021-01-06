@@ -13,6 +13,7 @@
     "react-scripts": "4.0.1",
     "react-three-fiber": "^5.3.10",
     "three": "^0.124.0",
+    "three-gltf-exporter": "0.0.1",
     "valtio": "^0.5.0",
     "web-vitals": "^0.2.4"
   },
