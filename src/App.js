@@ -115,7 +115,7 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
             Number(1),
             extra,
             'CB',
-            3
+            5 // TODO: Make the token id increment dynamic
           )
           .send();
         console.log('op', op);
