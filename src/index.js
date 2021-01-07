@@ -3,11 +3,13 @@ import ReactDOM from 'react-dom';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
-
+import { DAppProvider, useReady, useWallet, useConnect } from './dapp';
 ReactDOM.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
+  <DAppProvider appName={'BOTS'}>
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  </DAppProvider>,
   document.getElementById('root')
 );
 

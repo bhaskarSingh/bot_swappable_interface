@@ -12,6 +12,18 @@ import { HexColorPicker } from 'react-colorful';
 import 'react-colorful/dist/index.css';
 import GLTFExporter from 'three-gltf-exporter';
 import * as THREE from 'three';
+import {
+  DAppProvider,
+  useReady,
+  useWallet,
+  useConnect,
+  useTezos,
+  useOnBlock,
+} from './dapp';
+
+import { MichelsonMap } from '@taquito/taquito';
+
+import { APP_NAME, NETWORK, CONTRACT_ADDRESS } from './defaults';
 
 //TODO: Make every mesh part colorable -- dependent on how the material is named inside blender
 const state = proxy({
@@ -74,6 +86,50 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
   const snap = useProxy(state);
   const [hovered, set] = useState(null);
 
+  const wallet = useWallet();
+  const ready = useReady();
+  const connect = useConnect();
+  const tezos = useTezos();
+
+  const handleConnect = React.useCallback(async () => {
+    try {
+      await connect(NETWORK);
+      //TODO: linking tezos account to email id + name
+      // alert('yo');
+    } catch (err) {
+      alert(err.message);
+    }
+  }, [connect]);
+
+  const mintNFT = React.useCallback(async (URL) => {
+    if (ready) {
+      console.log('yo');
+      const contract = await tezos.wallet.at(CONTRACT_ADDRESS);
+
+      const extra = MichelsonMap.fromLiteral({ id: URL });
+
+      try {
+        const op = await contract.methods
+          .mint(
+            'tz1iLVzBpCNTGz6tCBK2KHaQ8o44mmhLTBio',
+            Number(1),
+            extra,
+            'CB',
+            3
+          )
+          .send();
+        console.log('op', op);
+        // setOperation(op);
+      } catch (err) {
+        alert(err.message);
+      }
+
+      // const storage = await contract.storage();
+      // console.log('storage', storage);
+      // setStorage(storage.all_tokens.toString());
+    }
+  });
+
   useEffect(() => {
     const cursor = `<svg width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0)"><path fill="rgba(255, 255, 255, 0.5)" d="M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z" stroke="#000"/><g filter="url(#filter0_d)"><path d="M29.5 47C39.165 47 47 39.165 47 29.5S39.165 12 29.5 12 12 19.835 12 29.5 19.835 47 29.5 47z" fill="${snap.items[hovered]}"/></g><path d="M2 2l11 2.947L4.947 13 2 2z" fill="#000"/><text fill="#000" style="white-space:pre" font-family="Inter var, sans-serif" font-size="10" letter-spacing="-.01em"><tspan x="35" y="63">${hovered}</tspan></text></g><defs><clipPath id="clip0"><path fill="#fff" d="M0 0h64v64H0z"/></clipPath><filter id="filter0_d" x="6" y="8" width="47" height="47" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB"><feFlood flood-opacity="0" result="BackgroundImageFix"/><feColorMatrix in="SourceAlpha" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0"/><feOffset dy="2"/><feGaussianBlur stdDeviation="3"/><feColorMatrix values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.15 0"/><feBlend in2="BackgroundImageFix" result="effect1_dropShadow"/><feBlend in="SourceGraphic" in2="effect1_dropShadow" result="shape"/></filter></defs></svg>`;
     const auto = `<svg width="64" height="64" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="rgba(255, 255, 255, 0.5)" d="M29.5 54C43.031 54 54 43.031 54 29.5S43.031 5 29.5 5 5 15.969 5 29.5 15.969 54 29.5 54z" stroke="#000"/><path d="M2 2l11 2.947L4.947 13 2 2z" fill="#000"/></svg>`;
@@ -91,62 +147,82 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
 
   return (
     <>
-    <Html>
-    <button ref={link} onClick={() => {
-      const gltfExporter = new GLTFExporter();
+      <Html>
+        <button
+          ref={link}
+          onClick={() => {
+            const gltfExporter = new GLTFExporter();
 
-      gltfExporter.parse( [head[headCount], hand[bodyCount], body[bodyCount], leg[legCount]], function ( result ) {
-        console.log("result", result)
-        const blob = new Blob([result], { type: 'application/octet-stream' });
+            gltfExporter.parse(
+              [
+                head[headCount],
+                hand[bodyCount],
+                body[bodyCount],
+                leg[legCount],
+              ],
+              function (result) {
+                console.log('result', result);
+                const blob = new Blob([result], {
+                  type: 'application/octet-stream',
+                });
 
-        // const link = document.createElement( 'a' );
-        // link.style.display = 'none';
-        // window.document.body.appendChild( link ); 
-        // link.href = URL.createObjectURL( blob );
-				// link.download = "bot.glb";
-				// link.click();
-        upload(blob) 
+                // const link = document.createElement( 'a' );
+                // link.style.display = 'none';
+                // window.document.body.appendChild( link );
+                // link.href = URL.createObjectURL( blob );
+                // link.download = "bot.glb";
+                // link.click();
+                upload(blob);
+              },
+              { binary: true }
+            );
 
-      }, {binary: true} );
-
-      function upload(blob){
-        var fd = new FormData();
-        // fd.append('bot', blob, 'bot.glb');
-        fd.append("file", blob);
-        fetch('http://localhost:3005/api/test',
-        {
-            method: 'post',
-            body: fd
-        }).then((res) => {
-          // console.log(res)
-          return res.json()
-        }).then(res => {
-          console.log(res);
-        }).catch(err => {
-          console.log(err);
-        });
-      }
-
-      console.log("yo")
-    }} >export</button>
-    </Html>
-    <group
-      onPointerOver={(e) => (e.stopPropagation(), set(e.object.material.name))}
-      onPointerOut={(e) => e.intersections.length === 0 && set(null)}
-      onPointerMissed={() => (state.current = null)}
-      onPointerDown={(e) => {
-        e.stopPropagation();
-        console.log(e.object);
-        state.current = e.object.material.name;
-      }}
-      ref={group}
-      dispose={null}
-    >
-      {renderGroup(head, headCount, snap.items.head, 'head')}
-      {renderGroup(hand, bodyCount, snap.items.hands, 'hands')}
-      {renderGroup(body, bodyCount, snap.items.body, 'body')}
-      {renderGroup(leg, legCount, snap.items.legs, 'legs')}
-    </group>
+            function upload(blob) {
+              var fd = new FormData();
+              // fd.append('bot', blob, 'bot.glb');
+              fd.append('file', blob);
+              fetch('http://localhost:3005/api/test', {
+                method: 'post',
+                body: fd,
+              })
+                .then((res) => {
+                  // console.log(res)
+                  return res.json();
+                })
+                .then((res) => {
+                  console.log(res);
+                  console.log('yo');
+                  handleConnect();
+                  mintNFT(res.location);
+                })
+                .catch((err) => {
+                  console.log(err);
+                });
+            }
+          }}
+        >
+          export
+        </button>
+      </Html>
+      <group
+        onPointerOver={(e) => (
+          e.stopPropagation(), set(e.object.material.name)
+        )}
+        onPointerOut={(e) => e.intersections.length === 0 && set(null)}
+        onPointerMissed={() => (state.current = null)}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          console.log(e.object);
+          state.current = e.object.material.name;
+        }}
+        ref={group}
+        dispose={null}
+      >
+        {renderGroup(head, headCount, snap.items.head, 'head')}
+        {renderGroup(hand, bodyCount, snap.items.hands, 'hands')}
+        {renderGroup(body, bodyCount, snap.items.body, 'body')}
+        {renderGroup(leg, legCount, snap.items.legs, 'legs')}
+      </group>
     </>
   );
 };
@@ -177,6 +253,51 @@ function App() {
   const [headCount, updateHeadCount] = useState(0);
   const [bodyCount, updateBodyCount] = useState(0);
   const [legCount, updateLegCount] = useState(0);
+
+  const wallet = useWallet();
+  const ready = useReady();
+  const connect = useConnect();
+  const tezos = useTezos();
+
+  const mintNFT = React.useCallback(async (URL) => {
+    if (ready) {
+      console.log('yo');
+      const contract = await tezos.wallet.at(CONTRACT_ADDRESS);
+
+      const extra = MichelsonMap.fromLiteral({ id: URL });
+
+      try {
+        const op = await contract.methods
+          .mint(
+            'tz1iLVzBpCNTGz6tCBK2KHaQ8o44mmhLTBio',
+            Number(1),
+            extra,
+            'CB',
+            1
+          )
+          .send();
+        console.log('op', op);
+        // setOperation(op);
+      } catch (err) {
+        alert(err.message);
+      }
+
+      // const storage = await contract.storage();
+      // console.log('storage', storage);
+      // setStorage(storage.all_tokens.toString());
+    }
+  });
+
+  const handleConnect = React.useCallback(async () => {
+    try {
+      await connect(NETWORK);
+      //TODO: linking tezos account to email id + name
+      // alert('yo');
+    } catch (err) {
+      alert(err.message);
+    }
+  }, [connect]);
+
   return (
     <>
       <Picker />
@@ -193,11 +314,13 @@ function App() {
           position={[5, 25, 20]}
         />
         <Suspense fallback={null}>
-          <Bot
-            headCount={headCount}
-            bodyCount={bodyCount}
-            legCount={legCount}
-          />
+          <DAppProvider appName={'BOTS'}>
+            <Bot
+              headCount={headCount}
+              bodyCount={bodyCount}
+              legCount={legCount}
+            />
+          </DAppProvider>
           <Environment files="royal_esplanade_1k.hdr" />
           <ContactShadows
             rotation-x={Math.PI / 2}
@@ -246,6 +369,15 @@ function App() {
         className="leg_right"
       >
         {' leg > '}
+      </button>
+      <button
+        onClick={() => {
+          handleConnect();
+          mintNFT();
+        }}
+        className="leg_right"
+      >
+        connect
       </button>
     </>
   );
