@@ -105,17 +105,22 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
     if (ready) {
       console.log('yo');
       const contract = await tezos.wallet.at(CONTRACT_ADDRESS);
-
-      const extra = MichelsonMap.fromLiteral({ id: URL });
-
+      const hexedURL = hexEncode(URL);
+      const hexedSymbol = hexEncode('CB');
+      const metadata = MichelsonMap.fromLiteral({
+        uri: hexedURL,
+        symbol: hexedSymbol,
+      });
+      const RnId = (deepness = 10) =>
+        parseInt(Date.now() + Math.random() * deepness);
+      const randomId = RnId();
       try {
         const op = await contract.methods
           .mint(
             'tz1iLVzBpCNTGz6tCBK2KHaQ8o44mmhLTBio',
             Number(1),
-            extra,
-            'CB',
-            5 // TODO: Make the token id increment dynamic
+            metadata,
+            randomId // DONE: Make the token id increment dynamic
           )
           .send();
         console.log('op', op);
@@ -181,19 +186,22 @@ const Bot = ({ headCount, legCount, bodyCount }) => {
               var fd = new FormData();
               // fd.append('bot', blob, 'bot.glb');
               fd.append('file', blob);
-              fetch('http://localhost:3005/api/test', {
-                method: 'post',
-                body: fd,
-              })
+              fetch(
+                'https://cryptoverse-wars-backend-nfjp.onrender.com/api/upload-3d-model-to-ipfs',
+                {
+                  method: 'post',
+                  body: fd,
+                }
+              )
                 .then((res) => {
                   // console.log(res)
                   return res.json();
                 })
                 .then((res) => {
-                  console.log(res);
+                  console.log(res.body.ipfsHash);
                   console.log('yo');
                   handleConnect();
-                  mintNFT(res.location);
+                  mintNFT(res.body.ipfsHash);
                 })
                 .catch((err) => {
                   console.log(err);
@@ -258,35 +266,38 @@ function App() {
   const ready = useReady();
   const connect = useConnect();
   const tezos = useTezos();
+  const RnId = (deepness = 10) =>
+    parseInt(Date.now() + Math.random() * deepness);
 
-  const mintNFT = React.useCallback(async (URL) => {
-    if (ready) {
-      console.log('yo');
-      const contract = await tezos.wallet.at(CONTRACT_ADDRESS);
+  // const mintNFT = React.useCallback(async (URL) => {
+  //   if (ready) {
+  //     console.log('MINT TIME');
+  //     const randomId = RnId();
+  //     console.log('randomId', randomId);
+  //     const contract = await tezos.wallet.at(CONTRACT_ADDRESS);
 
-      const extra = MichelsonMap.fromLiteral({ id: URL });
+  //     const extra = MichelsonMap.fromLiteral({ id: URL });
+  //     try {
+  //       const op = await contract.methods
+  //         .mint(
+  //           'tz1iLVzBpCNTGz6tCBK2KHaQ8o44mmhLTBio',
+  //           Number(1),
+  //           extra,
+  //           'CB',
+  //           randomId
+  //         )
+  //         .send();
+  //       console.log('op', op);
+  //       // setOperation(op);
+  //     } catch (err) {
+  //       alert(err.message);
+  //     }
 
-      try {
-        const op = await contract.methods
-          .mint(
-            'tz1iLVzBpCNTGz6tCBK2KHaQ8o44mmhLTBio',
-            Number(1),
-            extra,
-            'CB',
-            1
-          )
-          .send();
-        console.log('op', op);
-        // setOperation(op);
-      } catch (err) {
-        alert(err.message);
-      }
-
-      // const storage = await contract.storage();
-      // console.log('storage', storage);
-      // setStorage(storage.all_tokens.toString());
-    }
-  });
+  //     // const storage = await contract.storage();
+  //     // console.log('storage', storage);
+  //     // setStorage(storage.all_tokens.toString());
+  //   }
+  // });
 
   const handleConnect = React.useCallback(async () => {
     try {
@@ -370,17 +381,31 @@ function App() {
       >
         {' leg > '}
       </button>
-      <button
-        onClick={() => {
-          handleConnect();
-          mintNFT();
-        }}
-        className="leg_right"
-      >
-        connect
-      </button>
     </>
   );
 }
 
 export default App;
+
+const hexEncode = function (str) {
+  let hex, i;
+
+  let result = '';
+  for (i = 0; i < str.length; i++) {
+    hex = str.charCodeAt(i).toString(16);
+    result += ('000' + hex).slice(-4);
+  }
+
+  return result;
+};
+
+const hexDecode = function (hex) {
+  let j;
+  const hexes = hex.match(/.{1,4}/g) || [];
+  let back = '';
+  for (j = 0; j < hexes.length; j++) {
+    back += String.fromCharCode(parseInt(hexes[j], 16));
+  }
+
+  return back;
+};
